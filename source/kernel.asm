@@ -1,6 +1,6 @@
 ; ==================================================================
-; CHOS -- The CH Operating System kernel
-; Copyright (C) 2016 CHOS Developers -- see doc/LICENSE.TXT
+; MikeOS -- The Mike Operating System kernel
+; Copyright (C) 2006 - 2014 MikeOS Developers -- see doc/LICENSE.TXT
 ;
 ; This is loaded from the drive by BOOTLOAD.BIN, as KERNEL.BIN.
 ; First we have the system call vectors, which start at a static point
@@ -11,8 +11,8 @@
 
 	BITS 16
 
-	%DEFINE MIKEOS_VER '0.5.0'	; OS version number
-	%DEFINE MIKEOS_API_VER 19	; API version for programs to check
+	%DEFINE MIKEOS_VER '4.5'	; OS version number
+	%DEFINE MIKEOS_API_VER 16	; API version for programs to check
 
 
 	; This is the location in RAM for kernel disk operations, 24K
@@ -27,8 +27,8 @@
 ; Note: these cannot be moved, or it'll break the calls!
 
 ; The comments show exact locations of instructions in this section,
-; and are used in programs/CHdev.inc so that an external program can
-; use a CHOS system call without having to know its exact position
+; and are used in programs/mikedev.inc so that an external program can
+; use a MikeOS system call without having to know its exact position
 ; in the kernel source code...
 
 os_call_vectors:
@@ -102,7 +102,6 @@ os_call_vectors:
 	jmp os_port_byte_out		; 00C9h
 	jmp os_port_byte_in		; 00CCh
 	jmp os_string_tokenize		; 00CFh
-	jmp get_cmd			; 00D2h	
 
 
 ; ------------------------------------------------------------------
@@ -120,7 +119,7 @@ os_main:
 
 	mov ax, 2000h			; Set all segments to match where kernel is loaded
 	mov ds, ax			; After this, we don't need to bother with
-	mov es, ax			; segments ever again, as CHOS and its programs
+	mov es, ax			; segments ever again, as MikeOS and its programs
 	mov fs, ax			; live entirely in 64K
 	mov gs, ax
 
@@ -148,14 +147,27 @@ no_change:
 	; Let's see if there's a file called AUTORUN.BIN and execute
 	; it if so, before going to the program launcher menu
 
-	mov ax, autorun_bin_file_name
-	mov cx, 32768			; Otherwise load the program into RAM...
-	call os_load_file
-	jmp execute_bin_program		; ...and move on to the executing part
+	jmp no_autorun_bin		; Run BASIC
 
 
 	; Or perhaps there's an AUTORUN.BAS file?
 
+no_autorun_bin:
+	mov ax, autorun_bas_file_name
+	call os_file_exists
+	jc option_screen		; Skip next section if AUTORUN.BAS doesn't exist
+
+	mov cx, 32768			; Otherwise load the program into RAM
+	call os_load_file
+	call os_clear_screen
+	mov ax, 32768
+	call os_run_basic		; Run the kernel's BASIC interpreter
+
+	jmp no_autorun_bin		; Run BASIC
+
+
+	; Now we display a dialog box offering the user a choice of
+	; a menu-driven program selector, or a command-line interface
 
 execute_bin_program:
 	call os_clear_screen		; Clear screen before running
@@ -172,10 +184,7 @@ execute_bin_program:
 					; (program must end with 'ret')
 
 	call os_clear_screen		; When finished, clear screen
-	mov ax, autorun_bin_file_name	
-	mov cx, 32768			; Otherwise load the program into RAM...
-	call os_load_file
-	jmp execute_bin_program		; ...and move on to the executing part
+	jmp no_autorun_bin		; Run BASIC	
 
 
 not_bin_extension:
@@ -217,10 +226,7 @@ not_bin_extension:
 	call os_wait_for_key
 
 	call os_clear_screen
-	mov ax, autorun_bin_file_name	; Skip next three lines if AUTORUN.BIN doesn't exist
-	mov cx, 32768			; Otherwise load the program into RAM...
-	call os_load_file
-	jmp execute_bin_program		; ...and move on to the executing part
+	jmp no_autorun_bin		; Run BASIC
 
 
 not_bas_extension:
@@ -232,24 +238,21 @@ not_bas_extension:
 	mov dx, 0			; One button for dialog box
 	call os_dialog_box
 
-	mov ax, autorun_bin_file_name	; Skip next three lines if AUTORUN.BIN doesn't exist
-	mov cx, 32768			; Otherwise load the program into RAM...
-	call os_load_file
-	jmp execute_bin_program		; ...and move on to the executing part
+	jmp no_autorun_bin		; Run BASIC
 
 
 	; And now data for the above code...
 
 	kern_file_name		db 'KERNEL.BIN', 0
 
-	autorun_bin_file_name	db 'BFM.BIN', 0
-	autorun_bas_file_name	db 'AUTORUN.BAS', 0
+	autorun_bin_file_name	db 'AUTORUN.BIN', 0
+	autorun_bas_file_name	db 'BASIC.BAS', 0
 
 	bin_ext			db 'BIN'
 	bas_ext			db 'BAS'
 
-	kerndlg_string_1	db 'Cannot load and execute CHOS kernel!', 0
-	kerndlg_string_2	db 'KERNEL.BIN is the core of CHOS, and', 0
+	kerndlg_string_1	db 'Cannot load and execute MikeOS kernel!', 0
+	kerndlg_string_2	db 'KERNEL.BIN is the core of MikeOS, and', 0
 	kerndlg_string_3	db 'is not a normal program.', 0
 
 	ext_string_1		db 'Invalid filename extension! You can', 0
@@ -290,4 +293,3 @@ not_bas_extension:
 ; ==================================================================
 ; END OF KERNEL
 ; ==================================================================
-

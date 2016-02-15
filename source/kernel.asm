@@ -11,8 +11,8 @@
 
 	BITS 16
 
-	%DEFINE MIKEOS_VER '1.4.3'	; OS version number
-	%DEFINE MIKEOS_API_VER 18	; API version for programs to check
+	%DEFINE MIKEOS_VER '0.5.0'	; OS version number
+	%DEFINE MIKEOS_API_VER 19	; API version for programs to check
 
 
 	; This is the location in RAM for kernel disk operations, 24K
